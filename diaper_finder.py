@@ -40,9 +40,11 @@ options = Options()
 options.add_argument('--headless')
 options.add_argument('--disable-gpu')  # Last I checked this was necessary.
 # options.add_argument("window-size=1400,600")
-select_chromedriver()
-driver = webdriver.Chrome(executable_path=chrome_driver_path, options=options)
+# select_chromedriver()
+# driver = webdriver.Chrome(executable_path=chrome_driver_path, options=options)
+driver = webdriver.Chrome(options=options)
 # driver = webdriver.Chrome()
+driver.maximize_window()
 url = 'https://www.amazon.ca/'
 
 # ASSIGINING XPATH VALUE FOR ALL THE FIELDS
@@ -54,7 +56,8 @@ filter_4_to_7m = "//li[@ aria-label='4 to 7 Months']//a"
 filter_8_to_11m = "//li[@ aria-label='8 to 11 Months']//a"
 filter_12_to_23m = "//li[@ aria-label='12 to 23 Months']//a"
 filter_24_and_up = "//li[@ aria-label='24 Months & Up']//a"
-pagination_next = "//ul[@class='a-pagination']//a[text()='Next']"
+# pagination_next = "//ul[@class='a-pagination']//a[text()='Next']"
+pagination_next = "//span[@class='s-pagination-strip']//a[text()='Next']"
 
 # WALMART XPATHS
 w_topsearch_box = "//input[@data-automation='search-form-input']"
@@ -140,8 +143,10 @@ def search_item(search_keyword):
 	'''
 	search_box = wait_for_element_and_retrun(top_search_box)
 	search_box.send_keys(search_keyword)
+	# input('entered search keyword now waiting to click. press enter to continue..')
 	search_button = wait_for_element_tobe_clickable_and_retrun(top_search_button)
 	search_button.click()
+	# input('clicked search button. search results should be displayed in the page now. press enter to continue..')
 	sleep(2)
 	# driver.save_screenshot("search_result.png")
 
@@ -169,6 +174,18 @@ def add_any_age_filter(index):
 	else:
 		print('WARNING: ' + index + ' is not a valid filter option.')
 
+def add_any_brand_filter(brand_string):
+	try:
+		brand_filter_xpath = "//div[@id='brandsRefinements']//text()[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '" + brand_string + "')]//..//..//..//a"
+		# brand_filter_xpath = "//li[@ aria-label='" + brand_string + "']//a"
+		brand_filter = wait_for_element_tobe_clickable_and_retrun(brand_filter_xpath)
+		brand_filter.click()
+		sleep(2)
+	except Exception as e:
+		print('WARNING: Unable filter by "' + brand_string + '".')
+		print(e)
+		# raise e
+
 def add_all_age_filters(age_filters):
 	if not age_filters:
 		return
@@ -177,7 +194,19 @@ def add_all_age_filters(age_filters):
 		for i in age_filters:
 			add_any_age_filter(i)
 	except Exception as e:
-		print('WARNING: Invalid filter option provided. Will continue without filter.')
+		print('WARNING: Invalid size filter option provided. Will continue without filter.')
+
+def add_all_brand_fielters(brand_filters):
+	if not brand_filters:
+		return
+	try:
+		brand_filters = brand_filters.split(',')
+		for i in brand_filters:
+			add_any_brand_filter(i)
+	except Exception as e:
+		# raise e
+		print('WARNING: Invalid brand filter option provided. Will continue without filter.')
+
 
 def page_navigation():
 	pagination_next_button = wait_for_element_tobe_clickable_and_retrun(pagination_next)
@@ -198,23 +227,27 @@ def get_all_price_list():
 	if all_per_price_elem:
 		c = 0
 		for i in all_per_price_elem:
-			# getting link
-			c = c+1
-			per_price_link_path = "(//span[@class='a-size-base a-color-secondary'])[" + str(c) +"]//..//..//a"
-			per_price_link_elem = driver.find_element_by_xpath(per_price_link_path)
-			per_price_link = per_price_link_elem.get_attribute('href')
+			try:
+				# getting link
+				c = c+1
+				per_price_link_path = "(//span[@class='a-size-base a-color-secondary'])[" + str(c) +"]//..//..//a"
+				per_price_link_elem = driver.find_element_by_xpath(per_price_link_path)
+				per_price_link = per_price_link_elem.get_attribute('href')
 
-			# getting descrition
-			item_title_path = "((//span[@class='a-size-base a-color-secondary'])[" + str(c) + "]//..//..//a//..//..//..//span)[1]"
-			item_title_elem = driver.find_element_by_xpath(item_title_path)
-			item_title = item_title_elem.text
+				# getting descrition
+				item_title_path = "((//span[@class='a-size-base a-color-secondary'])[" + str(c) + "]//..//..//a//..//..//..//span)[1]"
+				item_title_elem = driver.find_element_by_xpath(item_title_path)
+				item_title = item_title_elem.text
 
-			per_price = i.text
-			if '/count' in per_price and 'diaper' in item_title.lower():
-				per_price_value = per_price.replace('($', '').replace('/count)', '')
-				per_price_list.append(float(per_price_value))
+				per_price = i.text
+				if '/count' in per_price and 'diaper' in item_title.lower():
+					per_price_value = per_price.replace('($', '').replace('/count)', '')
+					per_price_list.append(float(per_price_value))
 
-				per_price_link_list.append(per_price_link)
+					per_price_link_list.append(per_price_link)
+			except Exception as e:
+				print('WARNING: Unable to get the link/description/price for this item:')
+				print(e)
 				
 
 def make_link_price_dict():
@@ -253,12 +286,13 @@ def save_dict_to_json(dict, file_name='diaper_list.json'):
 # 		print(e)
 # 	return subs
 
-def run(age_filters='', list_of_pages='5'):
+def run(age_filters='', list_of_pages='5', brand_filters='', search_keyword=''):
 	try:
 		go_to_page(url, 'Amazon.ca: Low Prices – Fast Shipping – Millions of Items')
-		driver.set_window_size(3840, 2160)
-		search_item('diapers')
+		# driver.set_window_size(3840, 2160)
+		search_item(search_keyword)
 		add_all_age_filters(age_filters)
+		add_all_brand_fielters(brand_filters)
 		get_all_price_list()
 		
 		for i in range(int(list_of_pages)-1):
@@ -266,8 +300,9 @@ def run(age_filters='', list_of_pages='5'):
 			try:
 				page_navigation()
 				get_all_price_list()
-			except:
+			except Exception as e:
 				print('ERROR! Unable to navigate to page ' + str(i+2))
+				print(e)
 				break
 
 		# making dict
@@ -299,17 +334,28 @@ def run_interactive():
 		print('WARNING: list_of_pages value provided is invalid, will use default value 5.')
 		list_of_pages = '5'
 	print('Please wait while we are fetching the lowest diaper price from Amazon.ca...')
-	run(age_filters, list_of_pages)
+	run(age_filters, list_of_pages, brand_filters, search_keyword)
 
 def run_default():
-	age_filters = '1,2'
-	list_of_pages = '5'
-	od_dict, lowest_price = run(age_filters, list_of_pages)
+	# get values from config
+	age_filters = get_config_value('age_filters')
+	list_of_pages = get_config_value('list_of_pages')
+	brand_filters = get_config_value('brand_filters')
+	search_keyword = get_config_value('search_keyword')
+
+	# # OVERRIDE CONFIG VALUES WITH HARD CODED VALUES
+	# # age_filters = '5'
+	# age_filters = ''
+	# list_of_pages = '5'
+	# brand_filters = 'huggies'
+	# search_keyword = 'huggies size 5'
+	od_dict, lowest_price = run(age_filters, list_of_pages, brand_filters, search_keyword)
 	od_dict = json.dumps(od_dict)
-	print('Sending email with lowest diaper price list.')
-	subject = 'Amazon Diaper lowest price is: ' + lowest_price
-	send_email_with_attachments(subject, body=od_dict)
-	print('Email sent.')
+	# send email
+	# print('Sending email with lowest diaper price list.')
+	# subject = 'Amazon Diaper lowest price is: ' + lowest_price
+	# send_email_with_attachments(subject, body=od_dict)
+	# print('Email sent.')
 
 
 # # for interactive one
