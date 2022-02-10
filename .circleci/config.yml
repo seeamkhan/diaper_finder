@@ -24,6 +24,12 @@ jobs:
     steps:
       - checkout
       - run: echo "this is the test job"
+      - run:
+          command: |
+            google-chrome --version
+            chromedriver --version
+            pwd
+      # - run: python diaper_finder.py
 
 # Orchestrate our job run sequence
 workflows:
