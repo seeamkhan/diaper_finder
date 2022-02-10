@@ -28,6 +28,8 @@ jobs:
             chromedriver --version
           name: Check install
       - run: pwd
+      - run: ls -l
+      - run: pip install -r ~/diaper_finder/requirements.txt
       - run: python diaper_finder.py
 
 # Orchestrate our job run sequence
