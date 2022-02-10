@@ -10,7 +10,14 @@ jobs:
     steps:
       - checkout
       - run: echo "this is the build job"
+      - run: pwd
       - run: python --version
+  test:
+    docker:
+      - image: cimg/python:3.10.1-browsers
+    steps:
+      - checkout
+      - run: echo "this is the test job"
       - browser-tools/install-chrome
       - browser-tools/install-chromedriver
       - run:
@@ -18,17 +25,7 @@ jobs:
             google-chrome --version
             chromedriver --version
           name: Check install
-  test:
-    docker:
-      - image: cimg/python:3.10.1-browsers
-    steps:
-      - checkout
-      - run: echo "this is the test job"
-      - run:
-          command: |
-            google-chrome --version
-            chromedriver --version
-            pwd
+      - run: pwd
       # - run: python diaper_finder.py
 
 # Orchestrate our job run sequence
