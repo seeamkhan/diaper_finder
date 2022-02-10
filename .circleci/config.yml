@@ -5,6 +5,7 @@ orbs:
 # Define the jobs we want to run for this project
 jobs:
   build:
+    working_directory: ~/diaper_finder
     docker:
       - image: cimg/python:3.10.1-browsers
     steps:
@@ -13,6 +14,7 @@ jobs:
       - run: pwd
       - run: python --version
   test:
+    working_directory: ~/diaper_finder
     docker:
       - image: cimg/python:3.10.1-browsers
     steps:
@@ -26,7 +28,7 @@ jobs:
             chromedriver --version
           name: Check install
       - run: pwd
-      # - run: python diaper_finder.py
+      - run: python diaper_finder.py
 
 # Orchestrate our job run sequence
 workflows:
